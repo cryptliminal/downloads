@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horizon One - Downloads</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    .container {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    h1 { margin-top: 0; font-size: 1.8rem; }
+    .badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .meta { color: var(--text-muted); font-size: 0.9rem; margin-top: 6px; }
+    .assets-list { list-style: none; padding: 0; margin: 24px 0 0 0; }
+    .asset-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      transition: background 0.2s;
+    }
+    .asset-item:hover { background: rgba(255, 255, 255, 0.03); }
+    .asset-info { display: flex; flex-direction: column; gap: 4px; }
+    .asset-name { font-weight: 500; }
+    .asset-size { font-size: 0.8rem; color: var(--text-muted); }
+    .btn {
+      background: var(--accent);
+      color: #0f172a;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .status { color: var(--text-muted); font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Horizon One Downloads</h1>
+    <div id="release-meta">
+      <span class="status">Checking for the latest release...</span>
+    </div>
+
+    <ul class="assets-list" id="assets-list"></ul>
+  </div>
+
+  <script>
+    // 1. Configure your GitHub repository details
+    const REPO_OWNER = "YOUR_GITHUB_USERNAME"; 
+    const REPO_NAME = "horizon-one";
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    }
+
+    async function loadLatestRelease() {
+      const metaContainer = document.getElementById("release-meta");
+      const assetsList = document.getElementById("assets-list");
+
+      try {
+        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`);
+        
+        if (!response.ok) {
+          throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Populate version tag and publish date
+        const releaseDate = new Date(data.published_at).toLocaleDateString();
+        metaContainer.innerHTML = `
+          <span class="badge">${data.tag_name}</span>
+          <div class="meta">Released on ${releaseDate}</div>
+        `;
+
+        // Render downloadable binaries
+        assetsList.innerHTML = "";
+        if (!data.assets || data.assets.length === 0) {
+          assetsList.innerHTML = `<li class="meta">No compiled assets attached to this release.</li>`;
+          return;
+        }
+
+        data.assets.forEach(asset => {
+          const item = document.createElement("li");
+          item.className = "asset-item";
+          item.innerHTML = `
+            <div class="asset-info">
+              <span class="asset-name">${asset.name}</span>
+              <span class="asset-size">${formatBytes(asset.size)}</span>
+            </div>
+            <a class="btn" href="${asset.browser_download_url}" target="_blank" rel="noopener">Download</a>
+          `;
+          assetsList.appendChild(item);
+        });
+
+      } catch (err) {
+        metaContainer.innerHTML = `<span style="color: #f87171;">Failed to load releases: ${err.message}</span>`;
+      }
+    }
+
+    loadLatestRelease();
+  </script>
+</body>
+</html>
